@@ -1,7 +1,9 @@
 (ns leiningen.release
   (:require
    [clojure.java.shell :as sh]
-   [clojure.string     :as string])
+   [clojure.string     :as string]
+   leiningen.do)
+  (:refer leiningen.do :rename {do lein-do})
   (:import
    [java.util.regex Pattern]))
 
@@ -155,10 +157,10 @@
   (case (detect-deployment-strategy project)
 
     :lein-deploy
-    (sh! "lein" "deploy")
+    (lein-do project "deploy")
 
     :lein-install
-    (sh! "lein" "install")
+    (lein-do project "install")
 
     :clojars
     (sh! "scp" "pom.xml" project-jar (clojars-url))
@@ -166,7 +168,7 @@
     :shell
     (apply sh! (:shell config))
 
-    (raise "Error: unrecognized deploy strategy: %s" (detect-deployment-strategy))))
+    (raise "Error: unrecognized deploy strategy: %s" (detect-deployment-strategy project))))
 
 (defn extract-project-version-from-file
   ([]
@@ -196,6 +198,7 @@
   (binding [config (or (:lein-release project) config)]
     (let [current-version  (get project :version)
           release-version  (compute-release-version current-version)
+          release-project  (merge project {:version release-version})
           next-dev-version (compute-next-development-version (.replaceAll current-version "-SNAPSHOT" ""))
           target-dir       (:target-path project (:target-dir project (:jar-dir project "."))) ; target-path for lein2, target-dir or jar-dir for lein1
           jar-file-name    (format "%s/%s-%s.jar" target-dir (:name project) release-version)]
@@ -208,9 +211,9 @@
         (scm! :tag (format "%s-%s" (:name project) release-version)))
       (when-not (.exists (java.io.File. jar-file-name))
         (println "creating jar and pom files...")
-        (sh! "lein" "jar")
-        (sh! "lein" "pom"))
-      (perform-deploy! project jar-file-name)
+        (lein-do release-project "jar")
+        (lein-do release-project "pom"))
+      (perform-deploy! release-project jar-file-name)
       (when-not (is-snapshot? (extract-project-version-from-file))
         (println (format "updating version %s => %s for next dev cycle" release-version next-dev-version))
         (set-project-version! release-version next-dev-version)
