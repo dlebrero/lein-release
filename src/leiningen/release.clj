@@ -237,7 +237,12 @@
   (binding [config (or (:lein-release project) config)]
     (let [current-version  (get project :version)
           release-version  (compute-release-version current-version)
-          release-project  (merge project {:version release-version})
+          release-project  (with-meta
+                             (merge project {:version release-version})
+                             (-> (meta project)
+                                 (update-in [:without-profiles :lein-release :version] (fn [_] release-version))
+                                 (update-in [:without-profiles :version] (fn [_] release-version))
+                                 (update-in [:version] (fn [_] release-version))))
           next-dev-version (compute-next-development-version (.replaceAll current-version "-SNAPSHOT" ""))
           target-dir       (:target-path project (:target-dir project (:jar-dir project "."))) ; target-path for lein2, target-dir or jar-dir for lein1
           ]
