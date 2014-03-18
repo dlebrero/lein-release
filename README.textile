@@ -8,7 +8,7 @@ The plug-in performs the following steps:
 2. Add the project.clj to the SCM system
 3. Commit the project.clj to the SCM system
 4. Tag the project with @projectName-version@
-5. If the project jar file does not exist, it builds it with @lein jar@ and @lein pom@
+5. It builds artifacts using the configured Build strategy (see the Build section below)
 6. Performs a Deploy (see the Deploy section below)
 7. Increments the project minor version number and re-adds the "-SNAPSHOT" suffix
 8. Add the project.clj to the SCM system
@@ -41,6 +41,14 @@ h3. @:scm@
     @:lein-release {:scm :git}@
 
 This can be used to specify the SCM (version control) system.  The release plug-in attempts to auto-detect the version control system by inspecting the current working directory (eg, for the @.git@ directory).  If this does not work for your project you can specify the SCM system explicitly.
+
+h3. @:build-via@
+
+   @:lein-release {:build-via :lein-jar-pom}@
+
+This can be used to explicitly specify the build strategy that will be used.  The currently supported values for this are:
+
+* @:lein-jar-pom@
 
 h3. @:deploy-via@
 
@@ -78,6 +86,16 @@ pre. (defproject org.clojars.relaynetwork/clj-avro "1.0.9-SNAPSHOT"
                      [org.clojure/clojure-contrib           "1.2.0"]
                      [org.clojars.kyleburton/clj-etl-utils  "1.0.41"]])
 
+h1. Build
+
+The build strategy is determined by the following:
+
+* if @:build-via@ is specified in the configuration, is value is used
+* otherwise @:lein-jar-pom@ is used
+
+Additional build strategies can be added by other lein plugins that depend
+on lein-release and define methods @build@.
+
 h1. Deploy
 
 The deployment strategy is determined by the following:
@@ -88,9 +106,13 @@ The deployment strategy is determined by the following:
 
 Deployment to clojars is handled by shelling out and running:
 
+
 pre. scp project-VERSION.jar pom.xml clojars@clojars.org:
 
 Deployment via Leiningen is handled by shelling out (for a deploy or install respectively).
+
+Additional build strategies can be added by other lein plugins that depend
+on lein-release and define methods @build@.
 
 h1. Environment Variable: RELEASE_QUALIFIER
 
