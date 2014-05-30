@@ -152,21 +152,22 @@
       default-clojars-url))
 
 (defn perform-deploy! [project project-jar]
-  (case (detect-deployment-strategy project)
+  (comment
+    (case (detect-deployment-strategy project)
 
-    :lein-deploy
-    (sh! "lein" "deploy")
+      :lein-deploy
+      (sh! "lein" "deploy")
 
-    :lein-install
-    (sh! "lein" "install")
+      :lein-install
+      (sh! "lein" "install")
 
-    :clojars
-    (sh! "scp" "pom.xml" project-jar (clojars-url))
+      :clojars
+      (sh! "scp" "pom.xml" project-jar (clojars-url))
 
-    :shell
-    (apply sh! (:shell config))
+      :shell
+      (apply sh! (:shell config))
 
-    (raise "Error: unrecognized deploy strategy: %s" (detect-deployment-strategy))))
+      (raise "Error: unrecognized deploy strategy: %s" (detect-deployment-strategy)))))
 
 (defn extract-project-version-from-file
   ([]
@@ -206,14 +207,12 @@
         (scm! :add "project.clj")
         (scm! :commit "-m" (format "lein-release plugin: preparing %s release" release-version))
         (scm! :tag (format "%s-%s" (:name project) release-version)))
-      (when-not (.exists (java.io.File. jar-file-name))
-        (println "creating jar and pom files...")
-        (sh! "lein" "jar")
-        (sh! "lein" "pom"))
+      (println "creating jar and pom files...")
+      (sh! "lein" "clean")
+      (sh! "lein" "uberjar")
       (perform-deploy! project jar-file-name)
       (when-not (is-snapshot? (extract-project-version-from-file))
         (println (format "updating version %s => %s for next dev cycle" release-version next-dev-version))
         (set-project-version! release-version next-dev-version)
         (scm! :add "project.clj")
         (scm! :commit "-m" (format "lein-release plugin: bumped version from %s to %s for next development cycle" release-version next-dev-version))))))
-
